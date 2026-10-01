@@ -1,0 +1,1736 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Туалетный музей</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-soft: #f4f4f4;
+    --text: #111111;
+    --text-soft: #555555;
+    --line: rgba(0,0,0,.12);
+    --overlay: rgba(255,255,255,.95);
+    --shadow: 0 8px 32px rgba(0,0,0,.12);
+    --placeholder: #e5e5e5;
+    --placeholder-text: #999;
+    --star: #d4a017;
+    --star-empty: rgba(0,0,0,.25);
+    --good: #2e7d32;
+    --bad: #c62828;
+  }
+  body.dark {
+    --bg: #0d0d0d;
+    --bg-soft: #1a1a1a;
+    --text: #f5f5f5;
+    --text-soft: #aaaaaa;
+    --line: rgba(255,255,255,.15);
+    --overlay: rgba(13,13,13,.95);
+    --shadow: 0 8px 32px rgba(0,0,0,.6);
+    --placeholder: #1f1f1f;
+    --placeholder-text: #666;
+    --star: #f5c542;
+    --star-empty: rgba(255,255,255,.3);
+    --good: #7bc86c;
+    --bad: #e57373;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    width: 100%; height: 100%; overflow: hidden;
+    font-family: 'Helvetica Neue','Segoe UI',Arial,sans-serif;
+    background: var(--bg); color: var(--text);
+    transition: background-color .5s ease, color .5s ease;
+    user-select: none;
+  }
+  #app { position: relative; width: 100%; height: 100%; overflow: hidden; }
+
+  /* ================ ЗАСТАВКА ================ */
+  #splash {
+    position: absolute; inset: 0; z-index: 100;
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    text-align: center; padding: 32px; background: var(--bg);
+    transition: opacity .9s ease, transform .9s ease, background-color .5s ease;
+  }
+  #splash.hidden { opacity: 0; transform: scale(1.06); pointer-events: none; }
+  .splash-title {
+    font-size: clamp(2rem, 7vw, 4.5rem); font-weight: 300;
+    letter-spacing: .12em; text-transform: uppercase;
+    margin-bottom: 20px; color: var(--text);
+    transition: color .5s ease;
+  }
+  .splash-sub {
+    font-size: clamp(.85rem, 2.2vw, 1.15rem); font-weight: 300;
+    letter-spacing: .18em; text-transform: lowercase;
+    color: var(--text-soft); max-width: 560px;
+    transition: color .5s ease;
+  }
+  .splash-hint {
+    position: absolute; bottom: 60px; font-size: .75rem;
+    letter-spacing: .3em; text-transform: uppercase;
+    color: var(--text-soft); opacity: .55;
+    animation: pulse 2.2s infinite;
+  }
+  @keyframes pulse { 0%,100% { opacity: .25; } 50% { opacity: .7; } }
+
+  /* ================ МЕНЮ ================ */
+  .menu-btn {
+    position: absolute; top: 20px; left: 20px; z-index: 60;
+    width: 48px; height: 48px; background: transparent; border: none;
+    cursor: pointer; display: flex; flex-direction: column;
+    justify-content: center; align-items: center; gap: 5px; padding: 0;
+    opacity: .85; transition: opacity .2s, transform .2s;
+  }
+  .menu-btn:hover { opacity: 1; }
+  .menu-btn:active { transform: scale(.92); }
+  .menu-btn span {
+    display: block; width: 26px; height: 2px; background: var(--text);
+    border-radius: 2px;
+    transition: background-color .5s ease, transform .3s ease, opacity .3s ease;
+    transform-origin: center;
+  }
+  .menu-btn.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+  .menu-btn.open span:nth-child(2) { opacity: 0; }
+  .menu-btn.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+  .side-menu {
+    position: absolute; top: 0; left: 0; bottom: 0;
+    width: min(360px, 85vw); z-index: 55;
+    background: var(--overlay);
+    backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+    border-right: 1px solid var(--line);
+    transform: translateX(-105%);
+    transition: transform .4s cubic-bezier(.2,.9,.3,1),
+                background-color .5s ease, border-color .5s ease;
+    display: flex; flex-direction: column;
+    padding: 90px 28px 32px; overflow-y: auto;
+  }
+  .side-menu.open { transform: translateX(0); }
+  .side-menu-section { margin-bottom: 28px; }
+  .side-menu-title {
+    font-size: .72rem; letter-spacing: .3em; text-transform: uppercase;
+    color: var(--text-soft); margin-bottom: 14px;
+    transition: color .5s ease;
+  }
+  .menu-item {
+    display: flex; justify-content: space-between; align-items: center;
+    width: 100%; padding: 12px 4px;
+    background: transparent; border: none;
+    border-bottom: 1px solid var(--line);
+    color: var(--text); font-family: inherit; font-size: 1rem;
+    letter-spacing: .06em; text-align: left; cursor: pointer;
+    transition: color .5s ease, border-color .5s ease, padding-left .2s, opacity .2s;
+  }
+  .menu-item:hover { padding-left: 10px; opacity: .75; }
+  .menu-item.active { font-weight: 500; }
+  .menu-item.active::after { content: '•'; }
+  .menu-item .badge {
+    margin-left: 8px; font-size: .72rem; padding: 2px 8px;
+    border-radius: 10px; background: var(--bg-soft); color: var(--text-soft);
+    border: 1px solid var(--line); letter-spacing: .05em;
+    transition: background-color .5s ease, color .5s ease, border-color .5s ease;
+  }
+  .menu-item .badge.gold {
+    background: var(--star); color: #111; border-color: var(--star);
+    font-weight: 700;
+  }
+
+  .toggle-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 4px; border-bottom: 1px solid var(--line);
+    transition: border-color .5s ease;
+  }
+  .toggle-label {
+    font-size: 1rem; letter-spacing: .06em;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .toggle-switch {
+    position: relative; width: 50px; height: 26px;
+    background: var(--bg-soft); border: 1px solid var(--line);
+    border-radius: 20px; cursor: pointer;
+    transition: background-color .5s ease, border-color .5s ease;
+    flex-shrink: 0;
+  }
+  .toggle-switch::after {
+    content: ''; position: absolute; top: 2px; left: 2px;
+    width: 20px; height: 20px; background: var(--text);
+    border-radius: 50%;
+    transition: transform .3s ease, background-color .5s ease;
+  }
+  .toggle-switch.on { background: rgba(120,120,120,.3); border-color: var(--line); }
+  .toggle-switch.on::after { transform: translateX(24px); }
+
+  .volume-row {
+    padding: 12px 4px 16px; border-bottom: 1px solid var(--line);
+    transition: border-color .5s ease;
+  }
+  .volume-label {
+    font-size: .8rem; letter-spacing: .1em; color: var(--text-soft);
+    margin-bottom: 8px;
+    transition: color .5s ease;
+  }
+  input[type=range].volume-slider {
+    width: 100%; height: 4px; -webkit-appearance: none; appearance: none;
+    background: var(--line); border-radius: 4px; outline: none;
+  }
+  input[type=range].volume-slider::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 18px; height: 18px; border-radius: 50%;
+    background: var(--text); cursor: pointer;
+    transition: background-color .5s ease;
+  }
+  input[type=range].volume-slider::-moz-range-thumb {
+    width: 18px; height: 18px; border-radius: 50%;
+    background: var(--text); cursor: pointer; border: none;
+  }
+
+  .menu-backdrop {
+    position: absolute; inset: 0; background: rgba(0,0,0,.35);
+    z-index: 50; opacity: 0; pointer-events: none;
+    transition: opacity .3s ease;
+  }
+  .menu-backdrop.open { opacity: 1; pointer-events: auto; }
+
+  /* ================ ЛЕНТА ================ */
+  #feed {
+    position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden;
+    padding: 80px 20px 60px; -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+  }
+  .feed-header { max-width: 1200px; margin: 0 auto 32px; padding: 0 8px; }
+  .feed-header-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .feed-home-btn.hidden { display: none; }
+  .feed-title {
+    font-size: clamp(1.4rem, 3.5vw, 2rem); font-weight: 300;
+    letter-spacing: .12em; text-transform: uppercase; margin-bottom: 6px;
+  }
+  .feed-subtitle {
+    font-size: .85rem; letter-spacing: .12em; color: var(--text-soft);
+    text-transform: lowercase;
+    transition: color .5s ease;
+  }
+  .feed-grid {
+    max-width: 1200px; margin: 0 auto; display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 24px;
+  }
+  .feed-empty {
+    grid-column: 1 / -1; text-align: center;
+    padding: 80px 20px; color: var(--text-soft);
+  }
+  .feed-empty-title {
+    font-size: 1.1rem; letter-spacing: .15em; text-transform: uppercase;
+    margin-bottom: 12px; color: var(--text);
+  }
+  .feed-empty-hint { font-size: .85rem; letter-spacing: .08em; line-height: 1.6; }
+
+  .toilet-card {
+    position: relative; background: var(--bg-soft);
+    border: 1px solid var(--line); border-radius: 4px;
+    overflow: hidden; cursor: pointer;
+    transition: transform .3s ease, background-color .5s ease,
+                border-color .5s ease, box-shadow .3s ease;
+  }
+  .toilet-card:hover { transform: translateY(-4px); box-shadow: var(--shadow); }
+  .toilet-card:active { transform: translateY(-2px) scale(.99); }
+  .toilet-card-image {
+    width: 100%; aspect-ratio: 4 / 3; background: var(--placeholder);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--placeholder-text); font-size: .8rem;
+    letter-spacing: .1em; text-transform: uppercase; overflow: hidden;
+    transition: background-color .5s ease, color .5s ease; position: relative;
+  }
+  .toilet-card-image img { width: 100%; height: 100%; object-fit: cover; }
+
+  .fav-btn {
+    position: absolute; top: 10px; right: 10px;
+    width: 38px; height: 38px; border-radius: 50%;
+    background: rgba(255,255,255,.9); border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem; color: var(--star-empty);
+    box-shadow: 0 2px 8px rgba(0,0,0,.15);
+    transition: transform .2s ease, background-color .3s ease, color .3s ease;
+    z-index: 2; padding: 0; line-height: 1;
+  }
+  body.dark .fav-btn { background: rgba(30,30,30,.9); }
+  .fav-btn:hover { transform: scale(1.1); background: #fff; }
+  body.dark .fav-btn:hover { background: rgba(50,50,50,.95); }
+  .fav-btn:active { transform: scale(.9); }
+  .fav-btn.active { color: var(--star); }
+
+  .toilet-card-info { padding: 14px 16px 18px; }
+  .toilet-card-name {
+    font-size: 1.05rem; font-weight: 500; margin-bottom: 4px;
+    letter-spacing: .02em;
+  }
+  .toilet-card-location {
+    font-size: .8rem; letter-spacing: .08em; color: var(--text-soft);
+    text-transform: uppercase;
+    transition: color .5s ease;
+  }
+
+  /* ================ ОБЩИЕ КРУГЛЫЕ КНОПКИ ================ */
+  .nav-circle {
+    width: 42px; height: 42px; border-radius: 50%;
+    background: transparent; border: 1px solid var(--line);
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem; color: var(--text);
+    transition: transform .2s, background-color .3s, color .3s, border-color .3s;
+    padding: 0; line-height: 1; flex-shrink: 0;
+  }
+  .nav-circle:hover { transform: scale(1.08); background: var(--bg-soft); }
+  .nav-circle:active { transform: scale(.92); }
+  .nav-circle svg {
+    width: 18px; height: 18px; stroke: currentColor;
+    fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
+  }
+
+  /* ================ ДЕТАЛИ ================ */
+  #detail {
+    position: absolute; inset: 0; z-index: 40;
+    background: var(--bg); overflow-y: auto;
+    transform: translateX(100%);
+    transition: transform .5s cubic-bezier(.2,.9,.3,1), background-color .5s ease;
+    -webkit-overflow-scrolling: touch;
+  }
+  #detail.open { transform: translateX(0); }
+  .detail-back {
+    position: sticky; top: 0; z-index: 3; background: var(--bg);
+    padding: 14px 20px 14px 76px;
+    border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px;
+    transition: background-color .5s ease, border-color .5s ease;
+  }
+  .detail-nav-left { display: flex; align-items: center; gap: 10px; }
+  .detail-fav {
+    width: 42px; height: 42px; border-radius: 50%;
+    background: transparent; border: 1px solid var(--line);
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    font-size: 1.2rem; color: var(--star-empty);
+    transition: transform .2s, background-color .3s, color .3s, border-color .3s;
+    padding: 0; flex-shrink: 0;
+  }
+  .detail-fav:hover { transform: scale(1.08); background: var(--bg-soft); }
+  .detail-fav:active { transform: scale(.92); }
+  .detail-fav.active { color: var(--star); }
+
+  .detail-content { max-width: 1000px; margin: 0 auto; padding: 32px 24px 80px; }
+  .detail-title {
+    font-size: clamp(1.6rem, 4vw, 2.4rem); font-weight: 300;
+    letter-spacing: .06em; margin-bottom: 8px;
+  }
+  .detail-location {
+    font-size: .85rem; letter-spacing: .15em; text-transform: uppercase;
+    color: var(--text-soft); margin-bottom: 32px;
+    transition: color .5s ease;
+  }
+
+  /* ================ ГАЛЕРЕЯ ================ */
+  .gallery {
+    position: relative; width: 100%; aspect-ratio: 16 / 10;
+    background: var(--placeholder); margin-bottom: 20px;
+    overflow: hidden; border-radius: 4px;
+    transition: background-color .5s ease;
+    touch-action: pan-y;
+  }
+  .gallery-track {
+    position: absolute; top: 0; left: 0; height: 100%;
+    display: flex; will-change: transform;
+  }
+  .gallery-slide {
+    flex: 0 0 100%; width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--placeholder-text); font-size: .8rem;
+    letter-spacing: .15em; text-transform: uppercase; overflow: hidden;
+  }
+  .gallery-slide img {
+    width: 100%; height: 100%; object-fit: cover;
+    pointer-events: none; user-select: none; -webkit-user-drag: none;
+  }
+  .gallery-nav {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    width: 44px; height: 44px; background: rgba(255,255,255,.85);
+    border: none; border-radius: 50%; cursor: pointer;
+    font-size: 1.3rem; color: #111;
+    display: flex; align-items: center; justify-content: center;
+    transition: background-color .2s, transform .2s, opacity .2s;
+    box-shadow: 0 2px 12px rgba(0,0,0,.2);
+    z-index: 2; padding: 0; line-height: 1;
+  }
+  .gallery-nav:hover { background: #fff; }
+  .gallery-nav:active { transform: translateY(-50%) scale(.92); }
+  .gallery-nav.prev { left: 12px; }
+  .gallery-nav.next { right: 12px; }
+
+  .gallery-dots {
+    display: flex; justify-content: center; gap: 8px;
+    margin-bottom: 32px; flex-wrap: wrap;
+  }
+  .gallery-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--line); cursor: pointer;
+    transition: background-color .3s, transform .3s;
+    border: none; padding: 0;
+  }
+  .gallery-dot.active { background: var(--text); transform: scale(1.3); }
+
+  .detail-description {
+    font-size: 1.05rem; line-height: 1.75; color: var(--text);
+    letter-spacing: .01em;
+    transition: color .5s ease;
+  }
+
+  /* ================ ЭКРАНЫ ДОСТИЖЕНИЙ И ТЕСТА ================ */
+  #achievements, #quiz {
+    position: absolute; inset: 0; z-index: 42;
+    background: var(--bg); overflow-y: auto;
+    transform: translateX(100%);
+    transition: transform .5s cubic-bezier(.2,.9,.3,1), background-color .5s ease;
+    -webkit-overflow-scrolling: touch;
+  }
+  #achievements.open, #quiz.open { transform: translateX(0); }
+  .ach-header, .quiz-header {
+    position: sticky; top: 0; z-index: 3; background: var(--bg);
+    padding: 14px 20px 14px 76px;
+    border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; gap: 10px;
+    transition: background-color .5s ease, border-color .5s ease;
+  }
+  .ach-title {
+    font-size: 1rem; letter-spacing: .2em; text-transform: uppercase;
+    color: var(--text-soft);
+    margin-left: 6px;
+    transition: color .5s ease;
+  }
+  .ach-content, .quiz-content {
+    max-width: 900px; margin: 0 auto;
+    padding: 32px 24px 80px;
+  }
+  .ach-list { display: flex; flex-direction: column; gap: 16px; }
+
+  .ach-item {
+    display: flex; align-items: center; gap: 20px;
+    padding: 20px 22px;
+    background: var(--bg-soft);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    transition: background-color .5s ease, border-color .5s ease, transform .2s;
+  }
+  .ach-item:hover { transform: translateX(4px); }
+  .ach-item.locked { opacity: .55; }
+
+  .ach-icon {
+    width: 56px; height: 56px; flex-shrink: 0;
+    border-radius: 50%;
+    background: var(--placeholder);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.6rem;
+    transition: background-color .5s ease, color .5s ease, box-shadow .3s;
+    filter: grayscale(1);
+    opacity: .5;
+  }
+  .ach-item.unlocked .ach-icon {
+    background: var(--star);
+    color: #111;
+    filter: none;
+    opacity: 1;
+    box-shadow: 0 0 24px rgba(212,160,23,.5);
+  }
+  .ach-body { flex: 1; min-width: 0; }
+  .ach-name {
+    font-size: 1.1rem; font-weight: 500;
+    margin-bottom: 4px; letter-spacing: .02em;
+  }
+  .ach-desc {
+    font-size: .85rem; line-height: 1.5; color: var(--text-soft);
+    transition: color .5s ease;
+  }
+  .ach-status {
+    font-size: .72rem; letter-spacing: .18em; text-transform: uppercase;
+    padding: 6px 12px; border-radius: 12px;
+    border: 1px solid var(--line);
+    color: var(--text-soft); white-space: nowrap;
+    transition: color .5s ease, border-color .5s ease, background-color .5s ease;
+  }
+  .ach-item.unlocked .ach-status {
+    color: var(--good); border-color: var(--good);
+    background: rgba(46,125,50,.08);
+  }
+  body.dark .ach-item.unlocked .ach-status {
+    background: rgba(123,200,108,.1);
+  }
+
+  /* ================ ТЕСТ ================ */
+  .quiz-intro { text-align: center; padding: 40px 20px; }
+  .quiz-intro-title {
+    font-size: 1.6rem; font-weight: 300; letter-spacing: .1em;
+    text-transform: uppercase; margin-bottom: 16px;
+  }
+  .quiz-intro-text {
+    font-size: .95rem; line-height: 1.7; color: var(--text-soft);
+    max-width: 520px; margin: 0 auto 32px;
+    transition: color .5s ease;
+  }
+  .quiz-start-btn {
+    padding: 14px 48px;
+    background: transparent; border: 2px solid var(--text);
+    color: var(--text); font-family: inherit;
+    font-size: .95rem; letter-spacing: .25em;
+    text-transform: uppercase; cursor: pointer;
+    border-radius: 4px;
+    transition: background-color .2s, color .2s, transform .2s;
+  }
+  .quiz-start-btn:hover { background: var(--text); color: var(--bg); }
+  .quiz-start-btn:active { transform: scale(.97); }
+
+  .quiz-progress {
+    font-size: .8rem; letter-spacing: .2em; text-transform: uppercase;
+    color: var(--text-soft); text-align: center; margin-bottom: 24px;
+    transition: color .5s ease;
+  }
+  .quiz-question { text-align: center; margin-bottom: 40px; }
+  .quiz-q-label {
+    font-size: .8rem; letter-spacing: .25em; text-transform: uppercase;
+    color: var(--text-soft); margin-bottom: 16px;
+    transition: color .5s ease;
+  }
+  .quiz-q-name {
+    font-size: clamp(1.4rem, 3.5vw, 2rem); font-weight: 300;
+    letter-spacing: .05em; line-height: 1.3;
+  }
+  .quiz-options {
+    display: grid; grid-template-columns: repeat(2, 1fr);
+    gap: 14px; max-width: 640px; margin: 0 auto;
+  }
+  .quiz-option {
+    padding: 22px 20px;
+    background: var(--bg-soft); border: 2px solid var(--line);
+    border-radius: 6px; cursor: pointer;
+    font-family: inherit; font-size: 1rem;
+    letter-spacing: .08em; text-align: center;
+    color: var(--text);
+    transition: border-color .2s, background-color .3s, transform .2s;
+  }
+  .quiz-option:hover {
+    border-color: var(--text-soft);
+    transform: translateY(-2px);
+  }
+  .quiz-option:active { transform: scale(.98); }
+  .quiz-option.correct {
+    border-color: var(--good);
+    background: rgba(46,125,50,.1);
+    color: var(--good);
+  }
+  body.dark .quiz-option.correct {
+    background: rgba(123,200,108,.15);
+  }
+  .quiz-option.wrong {
+    border-color: var(--bad);
+    background: rgba(198,40,40,.1);
+    color: var(--bad);
+  }
+  body.dark .quiz-option.wrong {
+    background: rgba(229,115,115,.15);
+  }
+  .quiz-option:disabled { cursor: default; }
+
+  .quiz-result { text-align: center; padding: 40px 20px; }
+  .quiz-result-score {
+    font-size: 3rem; font-weight: 300; letter-spacing: .05em;
+    margin-bottom: 12px;
+  }
+  .quiz-result-text {
+    font-size: 1rem; color: var(--text-soft);
+    margin-bottom: 32px; letter-spacing: .05em;
+    transition: color .5s ease;
+  }
+
+  /* ================ ПЛАШКА ДОСТИЖЕНИЯ ================ */
+  .ach-toast {
+    position: fixed; top: 24px; left: 50%;
+    transform: translateX(-50%) translateY(-200%);
+    z-index: 200;
+    display: flex; align-items: center; gap: 18px;
+    padding: 16px 28px 16px 18px;
+    background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+    color: #fff;
+    border: 2px solid var(--star);
+    border-radius: 10px;
+    box-shadow: 0 12px 48px rgba(0,0,0,.5), 0 0 32px rgba(212,160,23,.35);
+    min-width: 320px; max-width: min(90vw, 560px);
+    opacity: 0;
+    transition: transform .55s cubic-bezier(.2,.9,.3,1.4), opacity .4s;
+    pointer-events: none;
+  }
+  body.light .ach-toast {
+    background: linear-gradient(135deg, #fff8e0 0%, #ffeaa8 100%);
+    color: #111;
+    box-shadow: 0 12px 48px rgba(0,0,0,.2), 0 0 32px rgba(212,160,23,.5);
+  }
+  .ach-toast.show {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+  .ach-toast-icon {
+    width: 52px; height: 52px; flex-shrink: 0;
+    border-radius: 50%; background: var(--star); color: #111;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.6rem;
+    box-shadow: 0 0 24px rgba(212,160,23,.7);
+  }
+  .ach-toast-body { flex: 1; min-width: 0; }
+  .ach-toast-label {
+    font-size: .68rem; letter-spacing: .3em; text-transform: uppercase;
+    color: var(--star); margin-bottom: 4px; font-weight: 600;
+  }
+  body.light .ach-toast-label { color: #8a6520; }
+  .ach-toast-name {
+    font-size: 1.05rem; font-weight: 500; letter-spacing: .02em;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+
+  @media (max-width: 640px) {
+    .ach-toast {
+      top: 12px;
+      left: 12px;
+      right: 12px;
+      transform: translateY(-200%);
+      min-width: 0;
+      max-width: none;
+      padding: 14px 18px 14px 14px;
+    }
+    .ach-toast.show { transform: translateY(0); }
+  }
+
+  /* ================ МОБИЛЬНАЯ АДАПТАЦИЯ ================ */
+  @media (max-width: 640px) {
+    .feed-grid { grid-template-columns: 1fr; gap: 20px; }
+    #feed { padding: 72px 16px 40px; }
+    .detail-content, .ach-content, .quiz-content { padding: 24px 18px 60px; }
+    .gallery-nav { width: 38px; height: 38px; font-size: 1.1rem; }
+    .menu-btn { top: 14px; left: 14px; width: 42px; height: 42px; }
+    .side-menu { padding: 80px 22px 24px; }
+    .quiz-options { grid-template-columns: 1fr; }
+    .ach-item { padding: 16px 16px; gap: 14px; }
+    .ach-icon { width: 46px; height: 46px; font-size: 1.3rem; }
+    .ach-status { font-size: .65rem; padding: 5px 10px; }
+
+    #feed::-webkit-scrollbar,
+    #detail::-webkit-scrollbar,
+    .side-menu::-webkit-scrollbar,
+    #achievements::-webkit-scrollbar,
+    #quiz::-webkit-scrollbar { display: none; }
+    #feed, #detail, .side-menu, #achievements, #quiz { scrollbar-width: none; }
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ЗАСТАВКА -->
+  <div id="splash">
+    <h1 class="splash-title">Туалетный музей</h1>
+    <p class="splash-sub">изучите мировую архитектуру не выходя из дома!</p>
+    <div class="splash-hint">нажмите в любом месте</div>
+  </div>
+
+  <!-- КНОПКА МЕНЮ -->
+  <button id="menuBtn" class="menu-btn" aria-label="Меню">
+    <span></span><span></span><span></span>
+  </button>
+  <div id="menuBackdrop" class="menu-backdrop"></div>
+
+  <!-- БОКОВОЕ МЕНЮ -->
+  <aside id="sideMenu" class="side-menu">
+
+    <div class="side-menu-section">
+      <div class="side-menu-title">Настройки</div>
+
+      <div class="toggle-row">
+        <span class="toggle-label">Тёмная тема</span>
+        <div id="themeSwitch" class="toggle-switch"></div>
+      </div>
+
+      <div class="toggle-row">
+        <span class="toggle-label">Музыка</span>
+        <div id="musicSwitch" class="toggle-switch on"></div>
+      </div>
+
+      <div class="volume-row">
+        <div class="volume-label">Громкость</div>
+        <input type="range" id="volumeSlider" class="volume-slider"
+               min="0" max="100" value="35" />
+      </div>
+    </div>
+
+    <div class="side-menu-section">
+      <div class="side-menu-title">Разделы</div>
+      <button class="menu-item" data-country="favorites">
+        Избранное
+        <span class="badge" id="favBadge">0</span>
+      </button>
+      <button class="menu-item" id="goAchievements">
+        Достижения
+        <span class="badge" id="achBadge">0/4</span>
+      </button>
+      <button class="menu-item" id="goQuiz">
+        Тест: угадай страну
+      </button>
+    </div>
+
+    <div class="side-menu-section">
+      <div class="side-menu-title">Страны</div>
+      <button class="menu-item active" data-country="all">Все туалеты</button>
+      <button class="menu-item" data-country="newzealand">Новая Зеландия</button>
+      <button class="menu-item" data-country="japan">Япония</button>
+      <button class="menu-item" data-country="norway">Норвегия</button>
+      <button class="menu-item" data-country="switzerland">Швейцария</button>
+      <button class="menu-item" data-country="austria">Австрия</button>
+      <button class="menu-item" data-country="southkorea">Южная Корея</button>
+      <button class="menu-item" data-country="tanzania">Танзания</button>
+    </div>
+
+  </aside>
+
+  <!-- ЛЕНТА -->
+  <main id="feed">
+    <header class="feed-header">
+      <div class="feed-header-row">
+        <button class="nav-circle feed-home-btn hidden" id="feedHome" aria-label="В главное меню">
+          <svg viewBox="0 0 24 24">
+            <path d="M3 11.5L12 4l9 7.5"/>
+            <path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9"/>
+          </svg>
+        </button>
+        <div>
+          <h1 id="feedTitle" class="feed-title">Все туалеты</h1>
+          <p id="feedSubtitle" class="feed-subtitle">изучите мировую архитектуру</p>
+        </div>
+      </div>
+    </header>
+    <div id="feedGrid" class="feed-grid"></div>
+  </main>
+
+  <!-- ДЕТАЛИ -->
+  <section id="detail">
+    <div class="detail-back">
+      <div class="detail-nav-left">
+        <button class="nav-circle" id="detailBack" aria-label="Назад">
+          <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <button class="nav-circle" id="detailHome" aria-label="В главное меню">
+          <svg viewBox="0 0 24 24">
+            <path d="M3 11.5L12 4l9 7.5"/>
+            <path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9"/>
+          </svg>
+        </button>
+      </div>
+      <button class="detail-fav" id="detailFav" aria-label="В избранное">☆</button>
+    </div>
+    <div class="detail-content">
+      <h2 id="detailTitle" class="detail-title"></h2>
+      <div id="detailLocation" class="detail-location"></div>
+      <div id="gallery" class="gallery"><div class="gallery-track" id="galleryTrack"></div></div>
+      <div id="galleryDots" class="gallery-dots"></div>
+      <p id="detailDescription" class="detail-description"></p>
+    </div>
+  </section>
+
+  <!-- ДОСТИЖЕНИЯ -->
+  <section id="achievements">
+    <div class="ach-header">
+      <button class="nav-circle" id="achBack" aria-label="Назад">
+        <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <button class="nav-circle" id="achHome" aria-label="В главное меню">
+        <svg viewBox="0 0 24 24">
+          <path d="M3 11.5L12 4l9 7.5"/>
+          <path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9"/>
+        </svg>
+      </button>
+      <span class="ach-title">Достижения</span>
+    </div>
+    <div class="ach-content">
+      <div id="achList" class="ach-list"></div>
+    </div>
+  </section>
+
+  <!-- ТЕСТ -->
+  <section id="quiz">
+    <div class="quiz-header">
+      <button class="nav-circle" id="quizBack" aria-label="Назад">
+        <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <button class="nav-circle" id="quizHome" aria-label="В главное меню">
+        <svg viewBox="0 0 24 24">
+          <path d="M3 11.5L12 4l9 7.5"/>
+          <path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9"/>
+        </svg>
+      </button>
+    </div>
+    <div class="quiz-content" id="quizContent"></div>
+  </section>
+
+  <!-- ПЛАШКА ДОСТИЖЕНИЯ -->
+  <div id="achToast" class="ach-toast">
+    <div class="ach-toast-icon" id="achToastIcon">★</div>
+    <div class="ach-toast-body">
+      <div class="ach-toast-label">Достижение получено</div>
+      <div class="ach-toast-name" id="achToastName"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ============================================================
+   ДАННЫЕ: ТУАЛЕТЫ
+   Пути к картинкам — assets/toilets/имя.jpg
+   ============================================================ */
+const TOILETS = [
+  /* ---------- НОВАЯ ЗЕЛАНДИЯ ---------- */
+  {
+    id: 'nz-1', country: 'newzealand',
+    name: 'Hundertwasser Toilets',
+    city: 'Какакава', district: 'Нортленд',
+    description:
+      'Один из самых известных туалетов в мире, спроектированный художником и архитектором ' +
+      'Фриденсрайхом Хундертвассером. Цветная керамика, кривые линии, стеклянные бутылки, ' +
+      'растения и мозаика — здание выглядит скорее как маленькая сказочная архитектура, ' +
+      'чем туалет. Хундертвассер лично участвовал в реконструкции старого здания 1960-х годов.',
+    images: [
+      'assets/toilets/nz-1-1.jpg',
+      'assets/toilets/nz-1-2.jpg',
+    ],
+  },
+  {
+    id: 'nz-2', country: 'newzealand',
+    name: 'Lobster Loos',
+    city: 'Веллингтон', district: 'Wellington Waterfront',
+    description:
+      'Два общественных туалета, которые выглядят как огромные красно-оранжевые морские ' +
+      'существа или клешни. Они находятся на набережной Wellington Waterfront. ' +
+      'Архитектор Брэт Тёрстон специально сделал их скульптурными, чтобы туалет стал ' +
+      'заметной частью городской среды.',
+    images: [
+      'assets/toilets/nz-2-1.jpg',
+      'assets/toilets/nz-2-2.jpg',
+      'assets/toilets/nz-2-3.jpg',
+    ],
+  },
+  {
+    id: 'nz-3', country: 'newzealand',
+    name: 'Matakana Toilets',
+    city: 'Матакана', district: 'Окленд',
+    description:
+      'Туалет похож на две огромные перевёрнутые лодки. В конструкции есть деревянные рёбра ' +
+      'и даже скульптурные лица. Проект придумал Стэффан де Хаан, когда был студентом первого ' +
+      'курса архитектуры; его концепция победила в местном конкурсе.',
+    images: [
+      'assets/toilets/nz-3-1.jpg',
+      'assets/toilets/nz-3-2.jpg',
+    ],
+  },
+
+  /* ---------- ЯПОНИЯ ---------- */
+  { id:'jp-1', country:'japan', name:'Прозрачный туалет',
+    city:'Токио', district:'Сибуя',
+    description:'Стеклянные стены становятся матовыми, когда вы закрываете дверь. Лауреат множества архитектурных премий.',
+    images:['','','',''] },
+  { id:'jp-2', country:'japan', name:'Туалет-чайный домик',
+    city:'Киото', district:'Арасияма',
+    description:'Стилизован под традиционный японский чайный домик. Деревянная отделка, каменная дорожка, сад с мхом.',
+    images:['',''] },
+
+  /* ---------- НОРВЕГИЯ ---------- */
+  { id:'no-1', country:'norway', name:'Туалет на краю фьорда',
+    city:'Олесунн', district:'Мёре-ог-Ромсдал',
+    description:'Смотровая площадка с уборной на самом краю обрыва. Окно во всю стену выходит на фьорд.',
+    images:['','',''] },
+  { id:'no-2', country:'norway', name:'Туалет на трассе',
+    city:'Лом', district:'Иннландет',
+    description:'Придорожный комплекс с панорамным остеклением, тёплым полом и подогревом стёкол.',
+    images:[''] },
+
+  /* ---------- ШВЕЙЦАРИЯ ---------- */
+  { id:'ch-1', country:'switzerland', name:'Горный туалет-бункер',
+    city:'Церматт', district:'Вале',
+    description:'Спрятан в склоне горы. Внутри — панорамное окно с видом на Маттерхорн.',
+    images:['','',''] },
+
+  /* ---------- АВСТРИЯ ---------- */
+  { id:'at-1', country:'austria', name:'Туалет в Альпах',
+    city:'Инсбрук', district:'Тироль',
+    description:'Стеклянный куб на скале. Летом — смотровая, зимой — часть горнолыжной инфраструктуры.',
+    images:['',''] },
+
+  /* ---------- ЮЖНАЯ КОРЕЯ ---------- */
+  { id:'kr-1', country:'southkorea', name:'Туалет-цветок',
+    city:'Сувон', district:'Кёнгидо',
+    description:'Форма здания имитирует распустившийся цветок. Внутри — арт-инсталляции, на крыше — смотровая.',
+    images:['','',''] },
+  { id:'kr-2', country:'southkorea', name:'Туалет-капсула',
+    city:'Сеул', district:'Каннам',
+    description:'Футуристичная капсула с автодверьми и подсветкой, меняющей цвет по занятости.',
+    images:['',''] },
+
+  /* ---------- ТАНЗАНИЯ ---------- */
+  { id:'tz-1', country:'tanzania', name:'Туалет на сафари',
+    city:'Серенгети', district:'Мара',
+    description:'Смотровой туалет посреди саванны. Открытая площадка позволяет наблюдать за животными.',
+    images:['','',''] },
+];
+
+const COUNTRY_NAMES = {
+  all:{title:'Все туалеты', subtitle:'изучите мировую архитектуру'},
+  favorites:{title:'Избранное', subtitle:'ваша личная коллекция'},
+  newzealand:{title:'Новая Зеландия', subtitle:'архитектура на краю мира'},
+  japan:{title:'Япония', subtitle:'технологии и традиции'},
+  norway:{title:'Норвегия', subtitle:'фьорды и северное сияние'},
+  switzerland:{title:'Швейцария', subtitle:'горы и минимализм'},
+  austria:{title:'Австрия', subtitle:'альпийские вершины'},
+  southkorea:{title:'Южная Корея', subtitle:'футуризм и арт'},
+  tanzania:{title:'Танзания', subtitle:'сафари и экотуризм'},
+};
+
+const COUNTRY_LABELS = {
+  newzealand: 'Новая Зеландия',
+  japan: 'Япония',
+  norway: 'Норвегия',
+  switzerland: 'Швейцария',
+  austria: 'Австрия',
+  southkorea: 'Южная Корея',
+  tanzania: 'Танзания',
+};
+
+/* ============================================================
+   ДАННЫЕ: ДОСТИЖЕНИЯ
+   ============================================================ */
+const ACHIEVEMENTS = [
+  { id:'all_toilets', icon:'🏛', name:'Полный обход',
+    desc:'Открыть карточки всех туалетов музея.' },
+  { id:'collector', icon:'★', name:'Коллекционер',
+    desc:'Добавить 5 туалетов в избранное.' },
+  { id:'expert', icon:'?', name:'Знаток',
+    desc:'Пройти тест «Угадай страну» без единой ошибки.' },
+  { id:'traveler', icon:'◇', name:'Путешественник',
+    desc:'Посмотреть туалеты всех семи стран.' },
+];
+
+/* ============================================================
+   СОСТОЯНИЕ
+   ============================================================ */
+const state = {
+  currentCountry: 'all',
+  currentToilet: null,
+  galleryIndex: 0,
+  favorites: new Set(),
+  viewedToilets: new Set(),
+  viewedCountries: new Set(),
+  unlocked: new Set(),
+  music: true,
+  volume: 0.35,
+};
+
+/* ============================================================
+   СОХРАНЕНИЕ
+   ============================================================ */
+function loadAll() {
+  try { state.favorites = new Set(JSON.parse(localStorage.getItem('tm-favorites') || '[]')); } catch(e){}
+  try { state.viewedToilets = new Set(JSON.parse(localStorage.getItem('tm-viewed-toilets') || '[]')); } catch(e){}
+  try { state.viewedCountries = new Set(JSON.parse(localStorage.getItem('tm-viewed-countries') || '[]')); } catch(e){}
+  try { state.unlocked = new Set(JSON.parse(localStorage.getItem('tm-unlocked') || '[]')); } catch(e){}
+  try {
+    const m = localStorage.getItem('tm-music');
+    if (m !== null) state.music = m === '1';
+  } catch(e){}
+  try {
+    const v = localStorage.getItem('tm-volume');
+    if (v !== null) state.volume = parseFloat(v);
+  } catch(e){}
+}
+function save(key, val) {
+  try { localStorage.setItem(key, JSON.stringify(val)); } catch(e){}
+}
+
+/* ============================================================
+   АУДИО
+   ============================================================ */
+const Sound = (() => {
+  let ctx = null;
+  function getCtx() {
+    if (!ctx) {
+      try { ctx = new (window.AudioContext || window.webkitAudioContext)(); }
+      catch (e) { ctx = null; }
+    }
+    if (ctx && ctx.state === 'suspended') ctx.resume();
+    return ctx;
+  }
+
+  function click() {
+    const c = getCtx(); if (!c) return;
+    const now = c.currentTime;
+    const osc = c.createOscillator();
+    const g = c.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(880, now);
+    osc.frequency.exponentialRampToValueAtTime(420, now + .045);
+    g.gain.setValueAtTime(.0001, now);
+    g.gain.exponentialRampToValueAtTime(.06, now + .005);
+    g.gain.exponentialRampToValueAtTime(.0001, now + .06);
+    osc.connect(g).connect(c.destination);
+    osc.start(now); osc.stop(now + .07);
+  }
+
+  function victory() {
+    const c = getCtx(); if (!c) return;
+    const now = c.currentTime;
+    const notes = [
+      { f: 523.25, t: 0.00, d: 1.6, v: 0.18 },
+      { f: 659.25, t: 0.08, d: 1.5, v: 0.15 },
+      { f: 783.99, t: 0.16, d: 1.4, v: 0.13 },
+      { f: 1046.5, t: 0.28, d: 1.6, v: 0.10 },
+    ];
+    notes.forEach(n => {
+      const osc = c.createOscillator();
+      const g = c.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = n.f;
+      g.gain.setValueAtTime(.0001, now + n.t);
+      g.gain.exponentialRampToValueAtTime(n.v * state.volume * 1.4, now + n.t + .08);
+      g.gain.exponentialRampToValueAtTime(.0001, now + n.t + n.d);
+      osc.connect(g).connect(c.destination);
+      osc.start(now + n.t);
+      osc.stop(now + n.t + n.d + .1);
+    });
+  }
+
+  let ambient = null;
+  function startMusic() {
+    const c = getCtx(); if (!c) return;
+    if (ambient) return;
+
+    const master = c.createGain();
+    master.gain.value = 0;
+    master.connect(c.destination);
+
+    const delay = c.createDelay(2.0);
+    delay.delayTime.value = 1.4;
+    const fb = c.createGain();
+    fb.gain.value = 0.35;
+    const wet = c.createGain();
+    wet.gain.value = 0.6;
+    delay.connect(fb);
+    fb.connect(delay);
+    delay.connect(wet);
+    wet.connect(master);
+
+    const freqs = [
+      130.81, 146.83, 164.81, 196.00, 220.00,
+      261.63, 293.66, 329.63, 392.00,
+    ];
+
+    const nodes = [];
+    freqs.forEach((f, i) => {
+      const osc = c.createOscillator();
+      const g = c.createGain();
+      const lfo = c.createOscillator();
+      const lfoGain = c.createGain();
+
+      osc.type = i % 2 === 0 ? 'sine' : 'triangle';
+      osc.frequency.value = f;
+
+      lfo.frequency.value = 0.05 + Math.random() * 0.08;
+      lfoGain.gain.value = 0.02 + Math.random() * 0.02;
+      lfo.connect(lfoGain);
+      lfoGain.connect(g.gain);
+      lfo.start();
+
+      g.gain.value = 0.012;
+
+      osc.connect(g);
+      g.connect(master);
+      g.connect(delay);
+      osc.start();
+
+      nodes.push({ osc, g, lfo });
+    });
+
+    ambient = { master, nodes, delay, fb, wet };
+
+    const now = c.currentTime;
+    master.gain.setValueAtTime(0, now);
+    master.gain.linearRampToValueAtTime(state.volume * 0.6, now + 4);
+  }
+
+  function stopMusic() {
+    const c = getCtx(); if (!c || !ambient) return;
+    const now = c.currentTime;
+    ambient.master.gain.cancelScheduledValues(now);
+    ambient.master.gain.setValueAtTime(ambient.master.gain.value, now);
+    ambient.master.gain.linearRampToValueAtTime(0, now + 0.6);
+    const snapshot = ambient;
+    ambient = null;
+    setTimeout(() => {
+      try {
+        snapshot.nodes.forEach(n => { n.osc.stop(); n.lfo.stop(); });
+        snapshot.master.disconnect();
+      } catch(e){}
+    }, 800);
+  }
+
+  function setVolume(v) {
+    const c = getCtx(); if (!c) return;
+    if (ambient) {
+      ambient.master.gain.cancelScheduledValues(c.currentTime);
+      ambient.master.gain.linearRampToValueAtTime(v * 0.6, c.currentTime + 0.3);
+    }
+  }
+
+  return { click, victory, startMusic, stopMusic, setVolume };
+})();
+
+/* ============================================================
+   DOM
+   ============================================================ */
+const $ = id => document.getElementById(id);
+const splash = $('splash');
+const menuBtn = $('menuBtn');
+const menuBackdrop = $('menuBackdrop');
+const sideMenu = $('sideMenu');
+const themeSwitch = $('themeSwitch');
+const musicSwitch = $('musicSwitch');
+const volumeSlider = $('volumeSlider');
+const feedEl = $('feed');
+const feedTitle = $('feedTitle');
+const feedSubtitle = $('feedSubtitle');
+const feedGrid = $('feedGrid');
+const feedHome = $('feedHome');
+const detailEl = $('detail');
+const detailBack = $('detailBack');
+const detailHome = $('detailHome');
+const detailFav = $('detailFav');
+const detailTitle = $('detailTitle');
+const detailLoc = $('detailLocation');
+const detailDesc = $('detailDescription');
+const galleryEl = $('gallery');
+const galleryTrack = $('galleryTrack');
+const galleryDots = $('galleryDots');
+const achievementsEl = $('achievements');
+const achBack = $('achBack');
+const achHome = $('achHome');
+const achList = $('achList');
+const achBadge = $('achBadge');
+const goAchievements = $('goAchievements');
+const quizEl = $('quiz');
+const quizBack = $('quizBack');
+const quizHome = $('quizHome');
+const quizContent = $('quizContent');
+const goQuiz = $('goQuiz');
+const achToast = $('achToast');
+const achToastIcon = $('achToastIcon');
+const achToastName = $('achToastName');
+const favBadge = $('favBadge');
+
+/* ============================================================
+   ЗВУК НА КЛИКАХ
+   ============================================================ */
+document.addEventListener('click', (e) => {
+  const t = e.target.closest('button, .toilet-card, .menu-item, .toggle-switch, .quiz-option');
+  if (t) Sound.click();
+}, true);
+
+/* ============================================================
+   ЗАСТАВКА
+   ============================================================ */
+function dismissSplash() {
+  if (splash.classList.contains('hidden')) return;
+  Sound.click();
+  splash.classList.add('hidden');
+  if (state.music) Sound.startMusic();
+}
+splash.addEventListener('click', dismissSplash);
+splash.addEventListener('touchstart', (e) => {
+  if (e.target.closest('button')) return;
+  dismissSplash();
+}, { passive: true });
+
+/* ============================================================
+   МЕНЮ
+   ============================================================ */
+function openMenu() {
+  sideMenu.classList.add('open');
+  menuBackdrop.classList.add('open');
+  menuBtn.classList.add('open');
+}
+function closeMenu() {
+  sideMenu.classList.remove('open');
+  menuBackdrop.classList.remove('open');
+  menuBtn.classList.remove('open');
+}
+menuBtn.addEventListener('click', (e) => {
+  e.stopPropagation(); Sound.click();
+  if (sideMenu.classList.contains('open')) closeMenu();
+  else openMenu();
+});
+menuBackdrop.addEventListener('click', closeMenu);
+
+/* ============================================================
+   ТЕМА
+   ============================================================ */
+themeSwitch.addEventListener('click', () => {
+  Sound.click();
+  document.body.classList.toggle('dark');
+  try {
+    localStorage.setItem('tm-theme',
+      document.body.classList.contains('dark') ? 'dark' : 'light');
+  } catch(e){}
+});
+(function restoreTheme(){
+  try {
+    if (localStorage.getItem('tm-theme') === 'dark') document.body.classList.add('dark');
+  } catch(e){}
+})();
+
+/* ============================================================
+   МУЗЫКА
+   ============================================================ */
+musicSwitch.classList.toggle('on', state.music);
+volumeSlider.value = Math.round(state.volume * 100);
+
+musicSwitch.addEventListener('click', () => {
+  Sound.click();
+  state.music = !state.music;
+  musicSwitch.classList.toggle('on', state.music);
+  try { localStorage.setItem('tm-music', state.music ? '1' : '0'); } catch(e){}
+  if (state.music) Sound.startMusic();
+  else Sound.stopMusic();
+});
+
+volumeSlider.addEventListener('input', () => {
+  state.volume = parseInt(volumeSlider.value, 10) / 100;
+  try { localStorage.setItem('tm-volume', String(state.volume)); } catch(e){}
+  Sound.setVolume(state.volume);
+});
+
+/* ============================================================
+   ДОСТИЖЕНИЯ
+   ============================================================ */
+function unlockAchievement(id) {
+  if (state.unlocked.has(id)) return;
+  state.unlocked.add(id);
+  save('tm-unlocked', [...state.unlocked]);
+
+  const a = ACHIEVEMENTS.find(x => x.id === id);
+  if (!a) return;
+
+  showAchToast(a);
+  Sound.victory();
+  updateAchBadge();
+  if (achievementsEl.classList.contains('open')) renderAchievements();
+}
+
+function showAchToast(a) {
+  achToastIcon.textContent = a.icon;
+  achToastName.textContent = a.name;
+  achToast.classList.add('show');
+  clearTimeout(showAchToast._t);
+  showAchToast._t = setTimeout(() => {
+    achToast.classList.remove('show');
+  }, 4200);
+}
+
+function updateAchBadge() {
+  achBadge.textContent = `${state.unlocked.size}/${ACHIEVEMENTS.length}`;
+  achBadge.classList.toggle('gold', state.unlocked.size === ACHIEVEMENTS.length);
+}
+
+function checkAchievements() {
+  if (state.viewedToilets.size >= TOILETS.length) unlockAchievement('all_toilets');
+  if (state.favorites.size >= 5) unlockAchievement('collector');
+  if (state.viewedCountries.size >= Object.keys(COUNTRY_LABELS).length) unlockAchievement('traveler');
+}
+
+/* ============================================================
+   ЛЕНТА
+   ============================================================ */
+function updateFeedHomeBtn() {
+  const isAll = state.currentCountry === 'all';
+  feedHome.classList.toggle('hidden', isAll);
+}
+
+function renderFeed() {
+  const country = state.currentCountry;
+  const meta = COUNTRY_NAMES[country] || COUNTRY_NAMES.all;
+  feedTitle.textContent = meta.title;
+  feedSubtitle.textContent = meta.subtitle;
+
+  let list;
+  if (country === 'all') list = TOILETS;
+  else if (country === 'favorites') list = TOILETS.filter(t => state.favorites.has(t.id));
+  else list = TOILETS.filter(t => t.country === country);
+
+  feedGrid.innerHTML = '';
+
+  if (list.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'feed-empty';
+    empty.innerHTML = country === 'favorites'
+      ? `<div class="feed-empty-title">Здесь пока пусто</div>
+         <div class="feed-empty-hint">Открывайте карточки и нажимайте на звёздочку,<br/>чтобы добавить их в избранное.</div>`
+      : `<div class="feed-empty-title">Здесь пока пусто</div>
+         <div class="feed-empty-hint">Для этой страны туалеты ещё не добавлены.</div>`;
+    feedGrid.appendChild(empty);
+    updateFavBadge();
+    updateFeedHomeBtn();
+    return;
+  }
+
+  list.forEach(t => {
+    const card = document.createElement('div');
+    card.className = 'toilet-card';
+    card.dataset.id = t.id;
+
+    const imageHtml = t.images && t.images[0]
+      ? `<img src="${t.images[0]}" alt="${t.name}" onerror="this.parentElement.textContent='фото'"/>`
+      : 'фото';
+    const fav = state.favorites.has(t.id);
+
+    card.innerHTML = `
+      <div class="toilet-card-image">
+        ${imageHtml}
+        <button class="fav-btn ${fav?'active':''}" data-id="${t.id}" aria-label="В избранное">
+          ${fav ? '★' : '☆'}
+        </button>
+      </div>
+      <div class="toilet-card-info">
+        <div class="toilet-card-name">${t.name}</div>
+        <div class="toilet-card-location">${t.city} · ${t.district}</div>
+      </div>`;
+
+    card.addEventListener('click', (e) => {
+      if (e.target.closest('.fav-btn')) return;
+      openDetail(t);
+    });
+    card.querySelector('.fav-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleFavorite(t.id);
+      if (state.currentCountry === 'favorites') renderFeed();
+    });
+
+    feedGrid.appendChild(card);
+  });
+
+  updateFavBadge();
+  updateFeedHomeBtn();
+}
+
+/* ============================================================
+   ИЗБРАННОЕ
+   ============================================================ */
+function toggleFavorite(id) {
+  if (state.favorites.has(id)) state.favorites.delete(id);
+  else state.favorites.add(id);
+  save('tm-favorites', [...state.favorites]);
+  updateFavBadge();
+  updateFavStars();
+  checkAchievements();
+}
+function updateFavBadge() {
+  favBadge.textContent = String(state.favorites.size);
+}
+function updateFavStars() {
+  document.querySelectorAll('.fav-btn').forEach(btn => {
+    const id = btn.dataset.id;
+    const on = state.favorites.has(id);
+    btn.classList.toggle('active', on);
+    btn.textContent = on ? '★' : '☆';
+  });
+  if (state.currentToilet) {
+    const on = state.favorites.has(state.currentToilet.id);
+    detailFav.classList.toggle('active', on);
+    detailFav.textContent = on ? '★' : '☆';
+  }
+}
+
+/* ============================================================
+   ВЫБОР РАЗДЕЛА
+   ============================================================ */
+document.querySelectorAll('.menu-item[data-country]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    state.currentCountry = btn.dataset.country;
+    document.querySelectorAll('.menu-item').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderFeed();
+    feedEl.scrollTop = 0;
+    closeMenu();
+  });
+});
+
+/* ============================================================
+   ДЕТАЛИ
+   ============================================================ */
+function openDetail(t) {
+  state.currentToilet = t;
+  state.galleryIndex = 0;
+
+  detailTitle.textContent = t.name;
+  detailLoc.textContent = `${t.city} · ${t.district}`;
+  detailDesc.textContent = t.description;
+
+  const on = state.favorites.has(t.id);
+  detailFav.classList.toggle('active', on);
+  detailFav.textContent = on ? '★' : '☆';
+
+  state.viewedToilets.add(t.id);
+  state.viewedCountries.add(t.country);
+  save('tm-viewed-toilets', [...state.viewedToilets]);
+  save('tm-viewed-countries', [...state.viewedCountries]);
+
+  renderGallery();
+  detailEl.classList.add('open');
+  detailEl.scrollTop = 0;
+
+  checkAchievements();
+}
+
+function closeDetail() {
+  detailEl.classList.remove('open');
+  state.currentToilet = null;
+}
+detailBack.addEventListener('click', () => { Sound.click(); closeDetail(); });
+detailHome.addEventListener('click', () => { goHome(); });
+detailFav.addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (!state.currentToilet) return;
+  toggleFavorite(state.currentToilet.id);
+  if (state.currentCountry === 'favorites') {
+    renderFeed();
+    closeDetail();
+  }
+});
+
+/* ============================================================
+   ГАЛЕРЕЯ
+   ============================================================ */
+function renderGallery() {
+  const t = state.currentToilet;
+  if (!t) return;
+  const imgs = (t.images && t.images.length) ? t.images : [''];
+  galleryTrack.innerHTML = '';
+  galleryDots.innerHTML = '';
+
+  imgs.forEach((src, i) => {
+    const slide = document.createElement('div');
+    slide.className = 'gallery-slide';
+    if (src) {
+      const img = document.createElement('img');
+      img.src = src; img.alt = t.name + ' ' + (i + 1);
+      img.onerror = () => { slide.textContent = 'фото ' + (i + 1); };
+      slide.appendChild(img);
+    } else {
+      slide.textContent = 'фото ' + (i + 1);
+    }
+    galleryTrack.appendChild(slide);
+
+    const dot = document.createElement('button');
+    dot.className = 'gallery-dot'; dot.dataset.index = i;
+    dot.addEventListener('click', (e) => {
+      e.stopPropagation(); goToSlide(i);
+    });
+    galleryDots.appendChild(dot);
+  });
+
+  galleryTrack.style.width = (imgs.length * 100) + '%';
+
+  galleryEl.querySelectorAll('.gallery-nav').forEach(n => n.remove());
+  if (imgs.length > 1) {
+    const prev = document.createElement('button');
+    prev.className = 'gallery-nav prev'; prev.textContent = '‹';
+    prev.addEventListener('click', (e) => {
+      e.stopPropagation();
+      goToSlide((state.galleryIndex - 1 + imgs.length) % imgs.length);
+    });
+
+    const next = document.createElement('button');
+    next.className = 'gallery-nav next'; next.textContent = '›';
+    next.addEventListener('click', (e) => {
+      e.stopPropagation();
+      goToSlide((state.galleryIndex + 1) % imgs.length);
+    });
+
+    galleryEl.appendChild(prev); galleryEl.appendChild(next);
+  }
+
+  updateGalleryPosition(false);
+  attachSwipe();
+}
+function goToSlide(i) { state.galleryIndex = i; updateGalleryPosition(true); }
+function updateGalleryPosition(animate) {
+  const imgs = state.currentToilet ? state.currentToilet.images : [];
+  const len = (imgs && imgs.length) ? imgs.length : 1;
+  const offsetPercent = -state.galleryIndex * (100 / len);
+  galleryTrack.style.transition = animate
+    ? 'transform .45s cubic-bezier(.2,.9,.3,1)' : 'none';
+  galleryTrack.style.transform = `translateX(${offsetPercent}%)`;
+  galleryDots.querySelectorAll('.gallery-dot').forEach((d, i) => {
+    d.classList.toggle('active', i === state.galleryIndex);
+  });
+}
+
+/* ============================================================
+   СВАЙП ГАЛЕРЕИ
+   ============================================================ */
+let tStartX = 0, tStartY = 0, tCurX = 0, tSwiping = false, tAxis = null;
+function attachSwipe() {
+  const imgs = state.currentToilet ? state.currentToilet.images : [];
+  const len = (imgs && imgs.length) ? imgs.length : 1;
+  if (len < 2) return;
+  if (galleryEl._swipe) {
+    const h = galleryEl._swipe;
+    galleryEl.removeEventListener('touchstart', h.start);
+    galleryEl.removeEventListener('touchmove', h.move);
+    galleryEl.removeEventListener('touchend', h.end);
+    galleryEl.removeEventListener('touchcancel', h.end);
+  }
+  const onStart = (e) => {
+    if (e.touches.length !== 1) return;
+    tStartX = e.touches[0].clientX;
+    tStartY = e.touches[0].clientY;
+    tCurX = tStartX;
+    tSwiping = false; tAxis = null;
+    galleryTrack.style.transition = 'none';
+  };
+  const onMove = (e) => {
+    if (e.touches.length !== 1) return;
+    const x = e.touches[0].clientX, y = e.touches[0].clientY;
+    const dx = x - tStartX, dy = y - tStartY;
+    if (!tAxis) {
+      if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
+        tAxis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
+      }
+    }
+    if (tAxis !== 'x') return;
+    tSwiping = true; tCurX = x;
+    const offsetPercent = -state.galleryIndex * (100 / len);
+    const dragPercent = (dx / galleryEl.clientWidth) * (100 / len);
+    galleryTrack.style.transform = `translateX(${offsetPercent + dragPercent}%)`;
+  };
+  const onEnd = () => {
+    if (!tSwiping) { updateGalleryPosition(true); return; }
+    const dx = tCurX - tStartX;
+    const th = 60;
+    if (dx < -th) state.galleryIndex = Math.min(state.galleryIndex + 1, len - 1);
+    else if (dx > th) state.galleryIndex = Math.max(state.galleryIndex - 1, 0);
+    updateGalleryPosition(true);
+    tSwiping = false; tAxis = null;
+  };
+  galleryEl.addEventListener('touchstart', onStart, { passive: true });
+  galleryEl.addEventListener('touchmove', onMove, { passive: true });
+  galleryEl.addEventListener('touchend', onEnd, { passive: true });
+  galleryEl.addEventListener('touchcancel', onEnd, { passive: true });
+  galleryEl._swipe = { start: onStart, move: onMove, end: onEnd };
+}
+
+/* ============================================================
+   ЭКРАН ДОСТИЖЕНИЙ
+   ============================================================ */
+goAchievements.addEventListener('click', () => {
+  Sound.click();
+  renderAchievements();
+  achievementsEl.classList.add('open');
+  closeMenu();
+});
+achBack.addEventListener('click', () => {
+  Sound.click();
+  achievementsEl.classList.remove('open');
+});
+achHome.addEventListener('click', goHome);
+
+function renderAchievements() {
+  achList.innerHTML = '';
+  ACHIEVEMENTS.forEach(a => {
+    const got = state.unlocked.has(a.id);
+    const item = document.createElement('div');
+    item.className = 'ach-item ' + (got ? 'unlocked' : 'locked');
+    item.innerHTML = `
+      <div class="ach-icon">${a.icon}</div>
+      <div class="ach-body">
+        <div class="ach-name">${a.name}</div>
+        <div class="ach-desc">${a.desc}</div>
+      </div>
+      <div class="ach-status">${got ? 'Получено' : 'Не получено'}</div>
+    `;
+    achList.appendChild(item);
+  });
+  updateAchBadge();
+}
+
+/* ============================================================
+   ТЕСТ
+   ============================================================ */
+goQuiz.addEventListener('click', () => {
+  Sound.click();
+  renderQuizIntro();
+  quizEl.classList.add('open');
+  closeMenu();
+});
+quizBack.addEventListener('click', () => {
+  Sound.click();
+  quizEl.classList.remove('open');
+});
+quizHome.addEventListener('click', goHome);
+
+const QUIZ_LENGTH = 5;
+let quizState = null;
+
+function renderQuizIntro() {
+  quizContent.innerHTML = `
+    <div class="quiz-intro">
+      <div class="quiz-intro-title">Угадай страну</div>
+      <p class="quiz-intro-text">
+        Вам будет показано название необычного туалета.<br>
+        Выберите страну, в которой он находится.<br>
+        ${QUIZ_LENGTH} вопросов. Без ошибок — достижение «Знаток».
+      </p>
+      <button class="quiz-start-btn" id="quizStart">Начать тест</button>
+    </div>
+  `;
+  $('quizStart').addEventListener('click', startQuiz);
+}
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function startQuiz() {
+  Sound.click();
+  const questions = shuffle(TOILETS).slice(0, QUIZ_LENGTH);
+  quizState = { questions, index: 0, score: 0, answers: [] };
+  renderQuestion();
+}
+
+function renderQuestion() {
+  const q = quizState.questions[quizState.index];
+  const correct = q.country;
+
+  const allCountries = Object.keys(COUNTRY_LABELS);
+  const wrongs = shuffle(allCountries.filter(c => c !== correct)).slice(0, 3);
+  const options = shuffle([correct, ...wrongs]);
+
+  quizContent.innerHTML = `
+    <div class="quiz-progress">
+      Вопрос ${quizState.index + 1} / ${QUIZ_LENGTH}
+    </div>
+    <div class="quiz-question">
+      <div class="quiz-q-label">Где находится</div>
+      <div class="quiz-q-name">${q.name}</div>
+    </div>
+    <div class="quiz-options" id="quizOptions"></div>
+  `;
+  const wrap = $('quizOptions');
+  options.forEach(c => {
+    const btn = document.createElement('button');
+    btn.className = 'quiz-option';
+    btn.textContent = COUNTRY_LABELS[c];
+    btn.dataset.country = c;
+    btn.addEventListener('click', () => answerQuestion(c, btn));
+    wrap.appendChild(btn);
+  });
+}
+
+function answerQuestion(chosen, btn) {
+  const q = quizState.questions[quizState.index];
+  const correct = q.country;
+  const isRight = chosen === correct;
+
+  quizContent.querySelectorAll('.quiz-option').forEach(b => {
+    b.disabled = true;
+    if (b.dataset.country === correct) b.classList.add('correct');
+    if (b === btn && !isRight) b.classList.add('wrong');
+  });
+
+  if (isRight) quizState.score++;
+  quizState.answers.push({ right: isRight });
+
+  Sound.click();
+
+  setTimeout(() => {
+    quizState.index++;
+    if (quizState.index >= QUIZ_LENGTH) {
+      finishQuiz();
+    } else {
+      renderQuestion();
+    }
+  }, 1300);
+}
+
+function finishQuiz() {
+  const score = quizState.score;
+
+  if (score === QUIZ_LENGTH) {
+    unlockAchievement('expert');
+  }
+
+  let verdict = '';
+  if (score === QUIZ_LENGTH) verdict = 'Идеально! Вы настоящий знаток.';
+  else if (score >= 4) verdict = 'Отличный результат!';
+  else if (score >= 3) verdict = 'Неплохо, но есть куда расти.';
+  else if (score >= 1) verdict = 'Попробуйте ещё раз.';
+  else verdict = 'Стоит пересмотреть каталог.';
+
+  quizContent.innerHTML = `
+    <div class="quiz-result">
+      <div class="quiz-result-score">${score} / ${QUIZ_LENGTH}</div>
+      <div class="quiz-result-text">${verdict}</div>
+      <button class="quiz-start-btn" id="quizRestart">Пройти ещё раз</button>
+    </div>
+  `;
+  $('quizRestart').addEventListener('click', startQuiz);
+}
+
+/* ============================================================
+   КНОПКА "ДОМОЙ"
+   ============================================================ */
+function goHome() {
+  Sound.click();
+
+  achievementsEl.classList.remove('open');
+  quizEl.classList.remove('open');
+  detailEl.classList.remove('open');
+  state.currentToilet = null;
+
+  state.currentCountry = 'all';
+  document.querySelectorAll('.menu-item').forEach(b => {
+    b.classList.toggle('active', b.dataset.country === 'all');
+  });
+
+  renderFeed();
+  feedEl.scrollTop = 0;
+}
+feedHome.addEventListener('click', goHome);
+
+/* ============================================================
+   ИНИЦИАЛИЗАЦИЯ
+   ============================================================ */
+loadAll();
+musicSwitch.classList.toggle('on', state.music);
+volumeSlider.value = Math.round(state.volume * 100);
+updateFavBadge();
+updateAchBadge();
+renderFeed();
+updateFavStars();
+</script>
+</body>
+</html>
